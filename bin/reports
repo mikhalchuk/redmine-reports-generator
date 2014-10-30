@@ -1,0 +1,11 @@
+#!/bin/bash
+
+FILE=$(readlink -f $0);
+DIR=$(dirname $FILE)
+
+if [[ $@ == db* ]]; then
+    $(php "$DIR/../src/index.php" $@)
+else
+    php "$DIR/../src/index.php" $@
+fi
+

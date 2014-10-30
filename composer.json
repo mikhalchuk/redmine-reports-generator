@@ -1,0 +1,14 @@
+{
+    "name": "mikhalchuk/redmine-reports-generator",
+    "description": "Generates reports from Redmine",
+    "authors": [
+        {
+            "name": "Sergii Mykhalchuk",
+            "email": "sergii.mykhalchuk@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.3.0",
+        "kbsali/redmine-api": "~1.0"
+    }
+}

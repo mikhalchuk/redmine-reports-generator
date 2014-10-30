@@ -4,7 +4,7 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "f92d10ba8fda4f2765bbc1bc59b50136",
+    "hash": "04d1d2d2a76ab35c5f0f95b90ee5e8ae",
     "packages": [
         {
             "name": "kbsali/redmine-api",

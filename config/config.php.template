@@ -1,0 +1,17 @@
+<?php
+
+return [
+    'date' => [
+        'from' => 'yyyy-mm-dd',
+        'to' => 'yyyy-mm-dd',
+    ],
+    'users' => [
+        userId1, // id of user from redmine database
+        userId2,
+    ],
+    'redmine' => [
+        'host' => '***', // without protocol
+        'login' => '***',
+        'pass' => '****'
+    ]
+];

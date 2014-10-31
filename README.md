@@ -3,16 +3,30 @@ redmine-reports-generator
 
 Generates reports from Redmine
 
-Install:
+## Install:
+```bash
+git clone
+```
+
+```bash
+composer install
+```
+
+## Configure:
+```bash
 cp config/config.php.template config/config.php
+```
 
-fill copied file by your data
+Then fill copied file by your data
 
-Working:
+## Working:
 
 change month and days count in config/template.xls
 
+```bash
 bin/reports generate
+```
 
-TODO:
+## TODO:
   change lib for generate excel docs
+  refactor command, split to smaller tasks

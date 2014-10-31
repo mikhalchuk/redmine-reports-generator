@@ -10,7 +10,7 @@ return [
         userId2,
     ],
     'redmine' => [
-        'host' => '***', // without protocol
+        'host' => '***', // with protocol
         'login' => '***',
         'pass' => '****'
     ]

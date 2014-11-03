@@ -118,11 +118,11 @@ class GenerateReportsCommand extends Command
         while (true) {
             $timeEntryParams['offset'] = $offset;
             $entries = $timeEntry->all($timeEntryParams);
-            if (empty($entries) || !is_array($entries)) {
+            if (empty($entries) || !is_array($entries) || !isset($entries['time_entries'])) {
                 break;
             }
 
-            $entries = array_values($entries)[0];
+            $entries = $entries['time_entries'];
             if (empty($entries) || !is_array($entries)) {
                 break;
             }

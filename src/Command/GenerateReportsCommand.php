@@ -30,7 +30,7 @@ class GenerateReportsCommand extends Command
 
         $handles = array();
 
-        $options = array(
+        $options = [
             CURLOPT_HEADER => 0,
             CURLOPT_RETURNTRANSFER => 1,
             CURLOPT_HTTPAUTH => CURLAUTH_BASIC,
@@ -38,7 +38,8 @@ class GenerateReportsCommand extends Command
                 $application->getConfig()['redmine']['login'] . ':' . $application->getConfig()['redmine']['pass'],
             CURLOPT_USERAGENT => "Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)",
             CURLOPT_TIMEOUT => 6000,
-        );
+            CURLOPT_CAINFO => '/etc/ssl/certs/ca-certificates.crt',
+        ];
 
         foreach ($responseData as $k => $row) {
             $ch{$k} = curl_init();
@@ -129,7 +130,7 @@ class GenerateReportsCommand extends Command
 
             $issuesUrls = [];
             foreach ($entries as $entry) {
-                if (!empty($entry)) {
+                if (!empty($entry['issue'])) {
                     $issueId = $entry['issue']['id'];
                     $userName = explode(' ', strtolower((string)$entry['user']['name']))[0];
                     if (!in_array($userName, $logins)) {
@@ -178,13 +179,18 @@ class GenerateReportsCommand extends Command
                     $issuesUrls[$issueId] = ['url' => $application->getIssuesUrl() . "/issues/{$issueId}.json"];
                 } else {
                     $output->writeln('<error>oops: time entry is empty</error>');
-                    die();
+                    //die();
                 }
                 $output->writeln('<info>' . $counter++ . "\r" . '</info>');
             }
 
             $offset += 100;
             $output->writeln('<info>' . $offset . ' entries processed' . '</info>');
+
+            if (empty($issuesUrls) || !is_array($issuesUrls)) {
+                $output->writeln('<info>oops: there are no issues urls</info>');
+                continue;
+            }
 
             $responseData = $this->multiCurl($issuesUrls);
             if (empty($responseData) || !is_array($responseData)) {

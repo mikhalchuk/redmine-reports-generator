@@ -1,3 +1,4 @@
+.idea
 vendor/*
 monthly_reports/*
 config/config.php

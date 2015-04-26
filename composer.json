@@ -26,7 +26,8 @@
     },
     "autoload": {
         "psr-4": {
-            "RedmineReportsGenerator\\": "src/"
+            "RedmineReportsGenerator\\": "src/",
+            "RedmineReportsGenerator\\Tests\\": "tests/"
         }
     }
 }

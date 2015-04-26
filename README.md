@@ -28,5 +28,6 @@ bin/reports generate
 ```
 
 ## TODO:
-  change lib for generate excel docs
-  refactor command, split to smaller tasks
+* add psr2 pre-commit hook
+* change lib for generate excel docs
+* refactor command, split to smaller tasks

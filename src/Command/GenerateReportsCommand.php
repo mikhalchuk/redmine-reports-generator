@@ -248,7 +248,6 @@ class GenerateReportsCommand extends Command
                 $aSheet->setCellValue('B6', $report['info']['level']);
 
                 if (!empty($report['info']['trial_end'])) {
-
                     $trialEndMonth = date('m', strtotime($report['info']['trial_end']));
                     $currentMonth = date('m');
 
@@ -260,7 +259,6 @@ class GenerateReportsCommand extends Command
 
                 $startIndex = 14;
                 foreach ($report['issues'] as $id => $issue) {
-
                     $aSheet->setCellValue('B' . $startIndex, $issue['title']);
                     $objPHPExcel->getActiveSheet()->getCell('B' . $startIndex)->getHyperlink()->setUrl($issue['link']);
 

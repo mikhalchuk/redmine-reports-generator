@@ -30,4 +30,6 @@ bin/reports generate
 ## TODO:
 * add psr2 pre-commit hook
 * change lib for generate excel docs
+* refactor curl
 * refactor command, split to smaller tasks
+* move out the app config

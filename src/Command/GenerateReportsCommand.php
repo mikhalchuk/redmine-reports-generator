@@ -1,12 +1,9 @@
 <?php
-
 namespace RedmineReportsGenerator\Command;
 
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-
-use Redmine\Client;
 
 class GenerateReportsCommand extends Command
 {
@@ -19,11 +16,6 @@ class GenerateReportsCommand extends Command
 
     private function multiCurl($responseData)
     {
-        /**
-         * @var \RedmineReportsGenerator\Application $application
-         */
-        $application = $this->getApplication();
-
         if (count($responseData) <= 0) {
             return false;
         }
@@ -35,7 +27,8 @@ class GenerateReportsCommand extends Command
             CURLOPT_RETURNTRANSFER => 1,
             CURLOPT_HTTPAUTH => CURLAUTH_BASIC,
             CURLOPT_USERPWD =>
-                $application->getConfig()['redmine']['login'] . ':' . $application->getConfig()['redmine']['pass'],
+                $this->getApplication()->getService('config')['redmine']['login'] . ':' .
+                $this->getApplication()->getService('config')['redmine']['pass'],
             CURLOPT_USERAGENT => "Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)",
             CURLOPT_TIMEOUT => 6000,
             CURLOPT_CAINFO => '/etc/ssl/certs/ca-certificates.crt',
@@ -82,107 +75,21 @@ class GenerateReportsCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        /**
-         * @var \RedmineReportsGenerator\Application $application
-         */
-        $application = $this->getApplication();
-        $client = new Client(
-            $application->getConfig()['redmine']['host'],
-            $application->getConfig()['redmine']['login'],
-            $application->getConfig()['redmine']['pass']
-        );
-
-        $timeEntryParams = [
-            'limit' => 100
-        ] + $application->getDateRange();
-
-        /**
-         * @var \Redmine\Api\TimeEntry $timeEntry
-         */
-        $timeEntry = $client->api('time_entry');
-
-        /**
-         * @var \Redmine\Api\User $user
-         */
-        $user = $client->api('user');
+        /** @var \RedmineReportsGenerator\Service\Client $client */
+        $client = $this->getApplication()->getService('client');
+        /** @var \RedmineReportsGenerator\Service\Report $report */
+        $report = $this->getApplication()->getService('report');
 
         $offset = 0;
-        $counter = 0;
-
-        $reports = [];
-        $logins = [];
-        $allUsers = [];
-        $allIssues = [];
         $issuesInfo = [];
 
-        $output->writeln('<info>Start getting issues...</info>');
+        $output->writeln('<info>start getting issues...</info>');
         while (true) {
-            $timeEntryParams['offset'] = $offset;
-            $entries = $timeEntry->all($timeEntryParams);
-            if (empty($entries) || !is_array($entries) || !isset($entries['time_entries'])) {
+            if (!$client->requestEntries($offset)) {
                 break;
             }
 
-            $entries = $entries['time_entries'];
-            if (empty($entries) || !is_array($entries)) {
-                break;
-            }
-
-            $issuesUrls = [];
-            foreach ($entries as $entry) {
-                if (!empty($entry['issue'])) {
-                    $issueId = $entry['issue']['id'];
-                    $userName = explode(' ', strtolower((string)$entry['user']['name']))[0];
-                    if (!in_array($userName, $logins)) {
-                        $usersIds = $application->getUsers();
-                        if (!empty($usersIds) && is_array($usersIds)) {
-                            if (!in_array($entry['user']['id'], $usersIds)) {
-                                continue;
-                            }
-                        }
-
-                        $userInfo = $user->show(
-                            $entry['user']['id']
-                        );
-
-                        $userData = [];
-                        $customFields = $userInfo['user']['custom_fields'];
-                        if (!empty($customFields) && is_array($customFields)) {
-                            foreach ($customFields as $field) {
-                                $userData[$field['name']] = $field['value'];
-                            }
-                        }
-
-                        $allUsers[$userName] = [
-                            'lastname' => $userInfo['user']['lastname'],
-                            'firstname' => $userInfo['user']['firstname'],
-                            'position' => isset($userData['Position']) ? $userData['Position'] : '',
-                            'level' => isset($userData['Level']) ? $userData['Level'] : '',
-                            'trial_start' => isset($userData['Trial start']) ? $userData['Trial start'] : '',
-                            'trial_end' => isset($userData['Trial end']) ? $userData['Trial end'] : '',
-                        ];
-                    }
-
-                    $logins[] = $userName;
-
-                    $hours = $entry['hours'];
-                    if (isset($allIssues[$userName][$issueId])) {
-                        $hours += $allIssues[$userName][$issueId]['hours'];
-                    }
-
-                    $allIssues[$userName][$issueId] =[
-                        'id' => $issueId,
-                        'hours' => $hours,
-                        'title' => '',
-                        'link' => '',
-                    ];
-                    $issuesUrls[$issueId] = ['url' => $application->getIssuesUrl() . "/issues/{$issueId}.json"];
-                } else {
-                    $output->writeln('<error>oops: time entry is empty</error>');
-                    //die();
-                }
-                $output->writeln('<info>' . $counter++ . "\r" . '</info>');
-            }
+            $issuesUrls = $client->collectIssuesInfo();
 
             $offset += 100;
             $output->writeln('<info>' . $offset . ' entries processed' . '</info>');
@@ -202,81 +109,17 @@ class GenerateReportsCommand extends Command
                 );
             } else {
                 $issuesInfo += $responseData;
-
-                $logins = array_unique($logins);
-                foreach ($logins as $login) {
-                    $reports[$login] = [
-                        'info' => $allUsers[$login],
-                        'issues' => $allIssues[$login]
-                    ];
-
-                    foreach ($reports[$login]['issues'] as $issueId => $obj) {
-                         $ss = json_decode($issuesInfo[$issueId]['data'], true);
-
-                        $deliveryTime = 0;
-                        if (!empty($ss['issue']['custom_fields']) && is_array($ss['issue']['custom_fields'])) {
-                            foreach ($ss['issue']['custom_fields'] as $customField) {
-                                if ($customField['id'] == '87') { // Delivery time
-                                    if (!empty($custom_field['value'])) {
-                                        $deliveryTime = $customField['value'];
-                                    }
-                                }
-                            }
-                        }
-
-                        $reports[$login]['issues'][$issueId]['delivery_time'] = $deliveryTime;
-                        $reports[$login]['issues'][$issueId]['title'] = "#{$issueId} {$ss['issue']['subject']}";
-                        $reports[$login]['issues'][$issueId]['link'] =
-                            $application->getIssuesUrl().  "/issues/{$issueId}";
-                    }
-                }
+                $client->prepareReportsData($issuesInfo);
             }
         }
         $output->writeln('<info>end getting issues</info>');
 
+        $reports = $client->getReportsData();
         if (!empty($reports) && is_array($reports)) {
             $output->writeln('<info>start create reports...</info>');
-            $counter = 0;
-            foreach ($reports as $login => $report) {
-                $objPHPExcel = \PHPExcel_IOFactory::load($application->getTemplatePath());
-                $objPHPExcel->setActiveSheetIndex(0);
-                $aSheet = $objPHPExcel->getActiveSheet();
-
-                $aSheet->setCellValue('B4', $report['info']['lastname'] . ' ' . $report['info']['firstname']);
-
-                $aSheet->setCellValue('B5', $report['info']['position']);
-                $aSheet->setCellValue('B6', $report['info']['level']);
-
-                if (!empty($report['info']['trial_end'])) {
-                    $trialEndMonth = date('m', strtotime($report['info']['trial_end']));
-                    $currentMonth = date('m');
-
-                    if ($trialEndMonth >= $currentMonth) {
-                        $aSheet->setCellValue('K4', $report['info']['trial_start']);
-                        $aSheet->setCellValue('K5', $report['info']['trial_end']);
-                    }
-                }
-
-                $startIndex = 14;
-                foreach ($report['issues'] as $id => $issue) {
-                    $aSheet->setCellValue('B' . $startIndex, $issue['title']);
-                    $objPHPExcel->getActiveSheet()->getCell('B' . $startIndex)->getHyperlink()->setUrl($issue['link']);
-
-                    $aSheet->setCellValue('C' . $startIndex, $issue['hours']);
-                    $aSheet->setCellValue('D' . $startIndex, $issue['delivery_time']);
-                    $aSheet->setCellValue('A' . $startIndex, '+');
-
-                    $objPHPExcel->getActiveSheet()->insertNewRowBefore($startIndex + 1, 1);
-
-                    $startIndex++;
-                }
-
-                $objWriter = new \PHPExcel_Writer_Excel5($objPHPExcel);
-
-                $objWriter->save($application->getOutputPath() . $login . '.xls');
-                $output->writeln('<info>' . $counter++ . "\r" . '</info>');
+            if ($report->generate($reports)) {
+                $output->writeln('<info>reports created</info>');
             }
-            $output->writeln('<info>reports created</info>');
         }
     }
 }

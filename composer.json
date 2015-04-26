@@ -10,6 +10,7 @@
     "require": {
         "php": ">=5.3.0",
         "kbsali/redmine-api": "1.5.0",
+        "phpoffice/phpexcel": "1.8.0",
         "symfony/console": "2.6.6"
     },
     "require-dev": {
@@ -24,9 +25,6 @@
     "autoload": {
         "psr-4": {
             "RedmineReportsGenerator\\": "src/"
-        },
-        "classmap": [
-            "lib/PHPExcel"
-        ]
+        }
     }
 }

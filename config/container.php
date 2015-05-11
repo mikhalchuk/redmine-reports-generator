@@ -6,6 +6,14 @@ $dc['config'] = function ($dc) {
     return require_once(__DIR__ . '/config.php');
 };
 
+$dc['httpClient'] = function ($dc) {
+    $client = new GuzzleHttp\Client(['defaults' => [
+        'timeout' => 6000,
+        'verify' => __DIR__ . '/ca-certificates.crt',
+    ]]);
+    return $client;
+};
+
 $dc['redmineClient'] = function ($dc) {
     return new Redmine\Client(
         $dc['config']['redmine']['host'],

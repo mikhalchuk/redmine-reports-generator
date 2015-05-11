@@ -1,9 +1,11 @@
 <?php
 namespace RedmineReportsGenerator\Command;
 
+use GuzzleHttp\Message\Response;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use GuzzleHttp\Pool;
 
 class GenerateReportsCommand extends Command
 {
@@ -14,71 +16,14 @@ class GenerateReportsCommand extends Command
             ->setDescription('Generates reports');
     }
 
-    private function multiCurl($responseData)
-    {
-        if (count($responseData) <= 0) {
-            return false;
-        }
-
-        $handles = array();
-
-        $options = [
-            CURLOPT_HEADER => 0,
-            CURLOPT_RETURNTRANSFER => 1,
-            CURLOPT_HTTPAUTH => CURLAUTH_BASIC,
-            CURLOPT_USERPWD =>
-                $this->getApplication()->getService('config')['redmine']['login'] . ':' .
-                $this->getApplication()->getService('config')['redmine']['pass'],
-            CURLOPT_USERAGENT => "Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)",
-            CURLOPT_TIMEOUT => 6000,
-            CURLOPT_CAINFO => '/etc/ssl/certs/ca-certificates.crt',
-        ];
-
-        foreach ($responseData as $k => $row) {
-            $ch{$k} = curl_init();
-            $options[CURLOPT_URL] = $row['url'];
-            curl_setopt_array($ch{$k}, $options);
-            $handles[$k] = $ch{$k};
-        }
-
-        $mh = curl_multi_init();
-
-        foreach ($handles as $k => $handle) {
-            curl_multi_add_handle($mh, $handle);
-        }
-
-        $running_handles = null;
-        do {
-            $status_cme = curl_multi_exec($mh, $running_handles);
-        } while ($running_handles > 0);
-
-        while ($running_handles && $status_cme == CURLM_OK) {
-            if (curl_multi_select($mh) != -1) {
-                do {
-                    $status_cme = curl_multi_exec($mh, $running_handles);
-                } while ($status_cme == CURLM_CALL_MULTI_PERFORM);
-            }
-        }
-
-        foreach ($responseData as $k => $row) {
-            $responseData[$k]['error'] = curl_error($handles[$k]);
-            if (!empty($responseData[$k]['error'])) {
-                $responseData[$k]['data'] = '';
-            } else {
-                $responseData[$k]['data']  = curl_multi_getcontent($handles[$k]);
-            }
-            curl_multi_remove_handle($mh, $handles[$k]);
-        }
-        curl_multi_close($mh);
-        return $responseData;
-    }
-
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         /** @var \RedmineReportsGenerator\Service\Client $client */
         $client = $this->getApplication()->getService('client');
         /** @var \RedmineReportsGenerator\Service\Report $report */
         $report = $this->getApplication()->getService('report');
+        /** @var \GuzzleHttp\Client $httpClient */
+        $httpClient = $this->getApplication()->getService('httpClient');
 
         $offset = 0;
         $issuesInfo = [];
@@ -99,7 +44,25 @@ class GenerateReportsCommand extends Command
                 continue;
             }
 
-            $responseData = $this->multiCurl($issuesUrls);
+            $options = [
+                'auth' => [
+                    $this->getApplication()->getService('config')['redmine']['login'],
+                    $this->getApplication()->getService('config')['redmine']['pass'],
+                ],
+            ];
+
+            $requests = [];
+            foreach ($issuesUrls as $id => $issueUrl) {
+                $requests[$id] = $httpClient->createRequest('GET', $issueUrl['url'], $options);
+            }
+
+            $responseData = [];
+            $results = Pool::batch($httpClient, $requests);
+            foreach ($requests as $id => $request) {
+                /** @var Response $result */
+                $result = $results->getResult($request);
+                $responseData[$id]['data'] = $result->getBody()->getContents();
+            }
             if (empty($responseData) || !is_array($responseData)) {
                 $output->writeln('<error>oops: empty multicurl response</error>');
             } elseif (count($issuesUrls) !== count($responseData)) {

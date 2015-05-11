@@ -13,7 +13,8 @@
         "phpoffice/phpexcel": "1.8.0",
         "pimple/pimple": "3.0.0",
         "symfony/console": "2.6.6",
-        "cilex/console-service-provider": "1.1.0"
+        "cilex/console-service-provider": "1.1.0",
+        "guzzlehttp/guzzle": "5.2.0"
     },
     "require-dev": {
       "squizlabs/php_codesniffer": "2.3.1",

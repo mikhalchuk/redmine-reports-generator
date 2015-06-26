@@ -9,7 +9,8 @@ $dc['config'] = function ($dc) {
 $dc['httpClient'] = function ($dc) {
     $client = new GuzzleHttp\Client(['defaults' => [
         'timeout' => 6000,
-        'verify' => __DIR__ . '/ca-certificates.crt',
+        //'verify' => __DIR__ . '/ca-certificates.crt',
+        'verify' => false,
     ]]);
     return $client;
 };

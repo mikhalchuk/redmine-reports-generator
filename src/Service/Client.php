@@ -109,10 +109,12 @@ class Client
                     );
 
                     $userData = [];
-                    $customFields = $userInfo['user']['custom_fields'];
-                    if (!empty($customFields) && is_array($customFields)) {
-                        foreach ($customFields as $field) {
-                            $userData[$field['name']] = $field['value'];
+                    if (isset($userInfo['user']['custom_fields'])) {
+                        $customFields = $userInfo['user']['custom_fields'];
+                        if (!empty($customFields) && is_array($customFields)) {
+                            foreach ($customFields as $field) {
+                                $userData[$field['name']] = $field['value'];
+                            }
                         }
                     }
 

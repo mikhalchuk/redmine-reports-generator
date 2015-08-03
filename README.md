@@ -28,6 +28,7 @@ bin/reports generate
 ```
 
 ## TODO:
+* add current date to report file name
 * add psr2 pre-commit hook
 * change lib for generate excel docs
 * refactor curl request (use guzzle for example)
